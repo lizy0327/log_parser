@@ -1,0 +1,7 @@
+# created by virtualenv automatically
+*.log
+*.temp
+*\.idea
+Lib/
+Scripts
+
