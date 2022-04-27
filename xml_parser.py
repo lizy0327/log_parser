@@ -57,63 +57,95 @@ def parser_xml():
             Attribute结果是一个字典。
             '''
             for item in event:
-                # print("tag: ", item.tag[51:])
-                if item.tag[51:] == "Provider":
-                    evt_dict['Provider Name'] = item.attrib['Name']
-                    evt_dict['GUID'] = item.attrib['Guid']
-                if item.tag[51:] == "TimeCreated":
-                    evt_dict['TimeCreated SystemTime'] = item.attrib['SystemTime']
-                if item.tag[51:] == "Data" and item.attrib['Name'] == "SubjectIP":
-                    evt_dict['SubjectIP'] = item.text
-                    evt_dict['IPVersion'] = item.attrib['IPVersion']
-                if item.tag[51:] == "Data" and item.attrib['Name'] == "SubjectUnix":
-                    evt_dict['SubjectUnix'] = "SubjectUnix"
-                    evt_dict['UID'] = item.attrib['Uid']
-                    evt_dict['GID'] = item.attrib['Gid']
-                    evt_dict['Local'] = item.attrib['Local']
-                if item.tag[51:] == "Data" and item.attrib['Name'] == "SubjectUserSid":
-                    evt_dict['SubjectUserSid'] = item.text
-                if item.tag[51:] == "Data" and item.attrib['Name'] == "SubjectUserIsLocal":
-                    evt_dict['SubjectUserIsLocal'] = item.text
-                if item.tag[51:] == "Data" and item.attrib['Name'] == "SubjectDomainName":
-                    evt_dict['SubjectDomainName'] = item.text
-                if item.tag[51:] == "Data" and item.attrib['Name'] == "SubjectUserName":
-                    evt_dict['SubjectUserName'] = item.text
-                if item.tag[51:] == "Data" and item.attrib['Name'] == "ObjectServer":
-                    evt_dict['ObjectServer'] = item.text
-                if item.tag[51:] == "Data" and item.attrib['Name'] == "ObjectType":
-                    evt_dict['ObjectType'] = item.text
-                if item.tag[51:] == "Data" and item.attrib['Name'] == "HandleID":
-                    evt_dict['HandleID'] = item.text
-                if item.tag[51:] == "Data" and item.attrib['Name'] == "ObjectName":
-                    evt_dict['ObjectName'] = item.text
-                if item.tag[51:] == "Data" and item.attrib['Name'] == "InformationRequested":
-                    evt_dict['InformationRequested'] = item.text
-                # 对于tag里只有element没有attrib的xml对象处理
-                if item.tag[51:] not in ["Data", "Provider", "TimeCreated", "Correlation", "Security"]:
-                    # print(item.tag[51:], item.text)
-                    evt_dict[item.tag[51:]] = item.text
 
-        print(evt_dict)
+                # 通过最原始的for循环读写数据保存数据，缺点是对EventData对象里Data tag的处理不够自动化
+                # if item.tag[51:] == "Provider":
+                #     evt_dict['Provider Name'] = item.attrib['Name']
+                #     evt_dict['GUID'] = item.attrib['Guid']
+                # if item.tag[51:] == "TimeCreated":
+                #     evt_dict['TimeCreated SystemTime'] = item.attrib['SystemTime']
+                # if item.tag[51:] == "Data" and item.attrib['Name'] == "SubjectIP":
+                #     evt_dict['SubjectIP'] = item.text
+                #     evt_dict['IPVersion'] = item.attrib['IPVersion']
+                # if item.tag[51:] == "Data" and item.attrib['Name'] == "SubjectUnix":
+                #     evt_dict['SubjectUnix'] = "SubjectUnix"
+                #     evt_dict['UID'] = item.attrib['Uid']
+                #     evt_dict['GID'] = item.attrib['Gid']
+                #     evt_dict['Local'] = item.attrib['Local']
+                # if item.tag[51:] == "Data" and item.attrib['Name'] == "SubjectUserSid":
+                #     evt_dict['SubjectUserSid'] = item.text
+                # if item.tag[51:] == "Data" and item.attrib['Name'] == "SubjectUserIsLocal":
+                #     evt_dict['SubjectUserIsLocal'] = item.text
+                # if item.tag[51:] == "Data" and item.attrib['Name'] == "SubjectDomainName":
+                #     evt_dict['SubjectDomainName'] = item.text
+                # if item.tag[51:] == "Data" and item.attrib['Name'] == "SubjectUserName":
+                #     evt_dict['SubjectUserName'] = item.text
+                # if item.tag[51:] == "Data" and item.attrib['Name'] == "ObjectServer":
+                #     evt_dict['ObjectServer'] = item.text
+                # if item.tag[51:] == "Data" and item.attrib['Name'] == "ObjectType":
+                #     evt_dict['ObjectType'] = item.text
+                # if item.tag[51:] == "Data" and item.attrib['Name'] == "HandleID":
+                #     evt_dict['HandleID'] = item.text
+                # if item.tag[51:] == "Data" and item.attrib['Name'] == "ObjectName":
+                #     evt_dict['ObjectName'] = item.text
+                # if item.tag[51:] == "Data" and item.attrib['Name'] == "InformationRequested":
+                #     evt_dict['InformationRequested'] = item.text
+                # # 对于tag里只有element没有attrib的xml对象处理
+                # if item.tag[51:] not in ["Data", "Provider", "TimeCreated", "Correlation", "Security"]:
+                #     # print(item.tag[51:], item.text)
+                #     evt_dict[item.tag[51:]] = item.text
 
-        # if item.attrib and item.text:
-        #     print("attrib: ", item.attrib, type(item.attrib))
-        #     print('-----dict-----')
-        #     for k, v in item.attrib.items():
-        #         print(k,v)
-        #     print("element: ", item.text)
-        # elif item.attrib:
-        #     print("attrib: ", item.attrib, type(item.attrib))
-        #     print('-----dict-----')
-        #     for k, v in item.attrib.items():
-        #         print(k,v)
-        # elif item.text:
-        #     print("element: ", item.text)
+                '''
+                EventData对象的tag全部是Data，没法区分不同的字段
+                在EventData对象的子节点里有2个比较特殊的字段，attrib有多个值，这2个需要特殊处理
+                <Data Name="SubjectIP" IPVersion="4">10.128.61.231</Data>
+                <Data Name="SubjectUnix" Uid="65534" Gid="65534" Local="false"/>
+                '''
+                if item.tag[51:] == "Data":
+                    if item.attrib['Name'] == "SubjectIP":
+                        evt_dict['SubjectIP'] = item.text
+                        evt_dict['IPVersion'] = item.attrib['IPVersion']
+                    elif item.attrib['Name'] == "SubjectUnix":
+                        evt_dict['SubjectUnix'] = "SubjectUnix"
+                        evt_dict['UID'] = item.attrib['Uid']
+                        evt_dict['GID'] = item.attrib['Gid']
+                        evt_dict['Local'] = item.attrib['Local']
+                    else:
+                        '''
+                        EventData子节点的tag全部都是Data无法进行区分
+                        子节点的attrib是一个字典格式，而且字典的key也都是Name，这个不需要
+                        最终需要的数据是以：子节点attrib的value作为“key",子节点element作为"value"进行存储
+                        示例：<Data Name="SubjectUserIsLocal">false</Data>
+                        '''
+                        for v in item.attrib.values():
+                            evt_dict[v] = item.text
+                else:
+                    '''
+                    在System对象的子节点里有2个比较特殊的字段，只有attrib，没有element，需要特殊处理，示例：
+                    <Provider Name="NetApp-Security-Auditing" Guid="{3CB2A168-FE19-4A4E-BDAD-DCF422F13473}"/>
+                    '''
+                    if item.tag[51:] == "Provider":
+                        evt_dict['Provider Name'] = item.attrib['Name']
+                        evt_dict['GUID'] = item.attrib['Guid']
+                    elif item.tag[51:] == "TimeCreated":
+                        evt_dict['TimeCreated SystemTime'] = item.attrib['SystemTime']
+                    else:
+                        evt_dict[item.tag[51:]] = item.text
 
-        # else:
-        #     print(item.tag, "faild.")
-        #     print("attrib: ", item.attrib)
-        # print("element: ", item.attrib)
+                # if item.attrib and item.text:
+                #     print("attrib: ", item.attrib, type(item.attrib))
+                #     print('-----dict-----')
+                #     for k, v in item.attrib.items():
+                #         print(k, v)
+                #     print("element: ", item.text)
+                # elif item.attrib:
+                #     print("attrib: ", item.attrib, type(item.attrib))
+                #     print('-----dict-----')
+                #     for k, v in item.attrib.items():
+                #         print(k, v)
+                # elif item.text:
+                #     print("element: ", item.text)
+
 
         # if not bool(item.attrib):
         #     print("text: ", item.text)
@@ -194,9 +226,4 @@ if __name__ == '__main__':
     res_list = parser_xml()
     write_csv(csv_name, res_list, report_path=file_path)
     # print(len(abc))
-    # print(abc[0])
-    # print(abc[1])
-    # print(abc[2])
-    # print(abc[1])
-    # print(abc[1])
     pass
