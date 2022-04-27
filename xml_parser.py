@@ -13,15 +13,14 @@
 
 import csv
 import os
+import time
+import random
 import collections
 import xml.etree.ElementTree as ET
 
 
-# import pandas as pd
-
-
 def parser_xml():
-    # 返回含有字典的列表数据
+    # 返回包含字典的列表数据
     res_list = []
     file_path = str("D:\\tmp\\demo.xml").replace("\\", "/")
     # file_path = str("D:\\tmp\\xmldata.xml").replace("\\", "/")
@@ -29,14 +28,12 @@ def parser_xml():
     # file_path = str("D:\\tmp\\lizy-demo.xml").replace("\\", "/")
     # file_path = str("D:\\tmp\\b.xml").replace("\\", "/")
     # file_path = str("D:\\tmp\\csdn.xml").replace("\\", "/")
-    print(file_path)
     tree = ET.parse(file_path)
     # 根节点
     root = tree.getroot()
     # 标签名
     print('root_tag:', root)
 
-    evt_list = []
     # 得到event对象
     for events in root:
         # 声明一个严格按照key插入顺序排序的字典
@@ -46,7 +43,6 @@ def parser_xml():
         for event in events:
             # print(event.tag[51:])
             # print(event.attrib)
-
             '''
             对system和eventdata对象进行遍历并把结果保存到字典中
             xml对象总共有3种属性：
@@ -146,7 +142,6 @@ def parser_xml():
                 # elif item.text:
                 #     print("element: ", item.text)
 
-
         # if not bool(item.attrib):
         #     print("text: ", item.text)
         # else:
@@ -190,20 +185,20 @@ def parser_xml():
         # evt_dict['ObjectName'] = events[1][9].text
         # evt_dict['InformationRequested'] = events[1][10].text
 
-        # 把解析的字典格式的数据，添加到list当中
-        evt_list.append(evt_dict)
+        # # 把解析的字典格式的数据，添加到list当中
+        # evt_list.append(evt_dict)
 
         # 在list中，每一条list记录都包含sys_dict和evt_dict这2条记录，其中sys_dict字典内容全部相等
         res_list.append(evt_dict)
-
     return res_list
 
 
 def write_csv(report_name, res_list, report_path: str = None):
     '''
     根据性能数据list内容，写入到本地文件中
-    :param report_file_name: 要写入的csv文件名称
+    :param report_name: 要写入的csv文件名称，不带csv后缀
     :param res_list: 需要写入的性能数据（list）
+    :param report_path: 文件写入路径
     :return: null
     '''
     # 默认情况下报告的目录放在python工程的同级目录下
@@ -212,17 +207,28 @@ def write_csv(report_name, res_list, report_path: str = None):
     # else:
     os.path.abspath(report_path.replace("\\", "/"))
     fileheader = res_list[0]
-    path = os.path.join(report_path, report_name)
-    # print(path)
-    with open(path, "w+", newline="") as fp:
-        writer = csv.DictWriter(fp, fieldnames=fileheader)
-        writer.writeheader()
-        writer.writerows(res_list)
+    file_path = os.path.join(report_path, report_name)
+
+    time_stamp = time.strftime("%Y%m%d-%H%M%S", time.localtime())
+    # random_stamp = str(random.sample(range(0, 9999999), 1)[0])[:3]
+    new_path = os.path.join(file_path + "_" + time_stamp)
+    # 如果存在同名的报告文件，则生成新的报告文件，并在文件末尾增加时间戳
+    if os.path.exists(file_path + ".csv"):
+        # new_path = origin_path + "_" + random_stamp
+        with open(new_path + ".csv", "w+", newline="") as fp:
+            writer = csv.DictWriter(fp, fieldnames=fileheader)
+            writer.writeheader()
+            writer.writerows(res_list)
+    else:
+        with open(file_path + ".csv", "w+", newline="") as fp:
+            writer = csv.DictWriter(fp, fieldnames=fileheader)
+            writer.writeheader()
+            writer.writerows(res_list)
 
 
 if __name__ == '__main__':
     file_path = "D:\\tmp\\"
-    csv_name = 'report1.csv'
+    csv_name = 'xml_report'
     res_list = parser_xml()
     write_csv(csv_name, res_list, report_path=file_path)
     # print(len(abc))
