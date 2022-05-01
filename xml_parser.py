@@ -19,12 +19,111 @@ import collections
 import xml.etree.ElementTree as ET
 
 
+def parser_event_type():
+    """
+    分析日志文件里共有多少种类型的日志
+    :return:
+    :return:
+    """
+    file_path = str("D:\\tmp\\xmldata.xml").replace("\\", "/")
+    tree = ET.parse(file_path)
+    # 根节点
+    root = tree.getroot()
+    # 标签名
+    print('root_tag:', root)
+    dct = {}
+    # 得到event对象合集
+    for events in root:
+        # print(events.tag)
+        # print(events[0][1].text)
+        # print(events[0][2].text)
+
+        dct[events[0][1].text] = events[0][2].text
+    print(dct)
+    return dct
+
+    # for sys in events:
+    # print(sys.tag)
+    # print(sys.attrib)
+    # print(sys[1].text)
+    # for i in sys:
+    #     print(i.tag)
+    # if i.tag[51:] == "EventName" or i.tag[51:] == "EventID":
+    #     print(i.text)
+    # print(i.tag)
+
+
+def parser_object(evt_type):
+    """
+    没用了 - 2022.05.02
+    每次只处理一条Open Object类型的日志，并返回字典格式的数据
+    :param evt_type: Open Object类型的日志
+    :param dct_name: 字典名称
+    :return: 字典格式的数据
+    """
+
+    # 声明一个严格按照key插入顺序排序的字典
+    dct_name = collections.OrderedDict()
+
+    # 得到一个完整的Event，遍历出System和EventData
+    for event in evt_type:
+        # 分别对System和EventData进行遍历，并把数据存储到字典中
+        for item in event:
+            '''
+            EventData对象的tag全部是Data，没法区分不同的字段
+            在EventData对象的子节点里有3个比较特殊的字段，attrib有多个值，
+            Object类型事件：<Data Name="SubjectIP" IPVersion="4">10.128.61.231</Data>
+            Object类型事件：<Data Name="SubjectUnix" Uid="65534" Gid="65534" Local="false"/>
+            Logon类型事件：<Data Name="IpAddress" IPVersion="4">10.128.61.232</Data>
+            '''
+            if item.tag[51:] == "Data":
+                # Object相关的事件
+                if item.attrib['Name'] == "SubjectIP":
+                    dct_name['SubjectIP'] = item.text
+                    dct_name['IPVersion'] = item.attrib['IPVersion']
+                # Object相关的事件
+                elif item.attrib['Name'] == "SubjectUnix":
+                    dct_name['SubjectUnix'] = "SubjectUnix"
+                    dct_name['UID'] = item.attrib['Uid']
+                    dct_name['GID'] = item.attrib['Gid']
+                    dct_name['Local'] = item.attrib['Local']
+                # Logon相关的事件
+                elif item.attrib['Name'] == "IpAddress":
+                    dct_name['IpAddress'] = item.text
+                    dct_name['IPVersion'] = item.attrib['IPVersion']
+                else:
+                    '''
+                    EventData子节点的tag全部都是Data无法进行区分
+                    子节点的attrib是一个字典格式，而且字典的key也都是Name，这个不需要
+                    最终需要的数据是以：子节点attrib的value作为“key",子节点element作为"value"进行存储
+                    示例：<Data Name="SubjectUserIsLocal">false</Data>
+                    '''
+                    for v in item.attrib.values():
+                        dct_name[v] = item.text
+            else:
+                '''
+                在System对象的子节点里有2个比较特殊的字段，只有attrib，没有element，需要特殊处理，示例：
+                <Provider Name="NetApp-Security-Auditing" Guid="{3CB2A168-FE19-4A4E-BDAD-DCF422F13473}"/>
+                '''
+                if item.tag[51:] == "Provider":
+                    dct_name['Provider Name'] = item.attrib['Name']
+                    dct_name['GUID'] = item.attrib['Guid']
+                elif item.tag[51:] == "TimeCreated":
+                    dct_name['TimeCreated SystemTime'] = item.attrib['SystemTime']
+                else:
+                    dct_name[item.tag[51:]] = item.text
+    return dct_name
+
+
 def parser_xml():
-    # 返回包含字典的列表数据
-    res_list = []
-    file_path = str("D:\\tmp\\demo.xml").replace("\\", "/")
+    """
+    处理xml文件，把每一条数据全部转换成字典类型的数据，并把所有的字典存放到一个大的list中
+    :return: 所有事件的list集合
+    """
+
+    # file_path = str("D:\\tmp\\demo.xml").replace("\\", "/")
     # file_path = str("D:\\tmp\\xmldata.xml").replace("\\", "/")
-    # file_path = str("D:\\tmp\\test.xml").replace("\\", "/")
+    file_path = str("D:\\tmp\\all_type.xml").replace("\\", "/")
     # file_path = str("D:\\tmp\\lizy-demo.xml").replace("\\", "/")
     # file_path = str("D:\\tmp\\b.xml").replace("\\", "/")
     # file_path = str("D:\\tmp\\csdn.xml").replace("\\", "/")
@@ -33,79 +132,40 @@ def parser_xml():
     root = tree.getroot()
     # 标签名
     print('root_tag:', root)
+    # 存放所有字典数据的list
+    events_list = []
 
-    # 得到event对象
+    # 得到event对象合集
     for events in root:
         # 声明一个严格按照key插入顺序排序的字典
-        evt_dict = collections.OrderedDict()
-
-        # 得到event里面system和eventdata对象
+        dct_name = collections.OrderedDict()
+        # 得到一个完整的Event，遍历出System和EventData
         for event in events:
-            # print(event.tag[51:])
-            # print(event.attrib)
-            '''
-            对system和eventdata对象进行遍历并把结果保存到字典中
-            xml对象总共有3种属性：
-            Tag： 使用<和>包围的部分，如<rank>成为start-tag，</rank>是end-tags；
-            Tag结果是一个字符串。
-            Element：被Tag包围的部分，如<rank>68</rank>，可以认为是一个节点，它可以有子节点。element的值通过element.text获得
-            Attribute：在Tag中可能存在的name/value对，如<country name="Liechtenstein">中的name="Liechtenstein"，一般表示属性。
-            Attribute结果是一个字典。
-            '''
+            # 分别对System和EventData进行遍历，并把数据存储到字典中
             for item in event:
-
-                # 通过最原始的for循环读写数据保存数据，缺点是对EventData对象里Data tag的处理不够自动化
-                # if item.tag[51:] == "Provider":
-                #     evt_dict['Provider Name'] = item.attrib['Name']
-                #     evt_dict['GUID'] = item.attrib['Guid']
-                # if item.tag[51:] == "TimeCreated":
-                #     evt_dict['TimeCreated SystemTime'] = item.attrib['SystemTime']
-                # if item.tag[51:] == "Data" and item.attrib['Name'] == "SubjectIP":
-                #     evt_dict['SubjectIP'] = item.text
-                #     evt_dict['IPVersion'] = item.attrib['IPVersion']
-                # if item.tag[51:] == "Data" and item.attrib['Name'] == "SubjectUnix":
-                #     evt_dict['SubjectUnix'] = "SubjectUnix"
-                #     evt_dict['UID'] = item.attrib['Uid']
-                #     evt_dict['GID'] = item.attrib['Gid']
-                #     evt_dict['Local'] = item.attrib['Local']
-                # if item.tag[51:] == "Data" and item.attrib['Name'] == "SubjectUserSid":
-                #     evt_dict['SubjectUserSid'] = item.text
-                # if item.tag[51:] == "Data" and item.attrib['Name'] == "SubjectUserIsLocal":
-                #     evt_dict['SubjectUserIsLocal'] = item.text
-                # if item.tag[51:] == "Data" and item.attrib['Name'] == "SubjectDomainName":
-                #     evt_dict['SubjectDomainName'] = item.text
-                # if item.tag[51:] == "Data" and item.attrib['Name'] == "SubjectUserName":
-                #     evt_dict['SubjectUserName'] = item.text
-                # if item.tag[51:] == "Data" and item.attrib['Name'] == "ObjectServer":
-                #     evt_dict['ObjectServer'] = item.text
-                # if item.tag[51:] == "Data" and item.attrib['Name'] == "ObjectType":
-                #     evt_dict['ObjectType'] = item.text
-                # if item.tag[51:] == "Data" and item.attrib['Name'] == "HandleID":
-                #     evt_dict['HandleID'] = item.text
-                # if item.tag[51:] == "Data" and item.attrib['Name'] == "ObjectName":
-                #     evt_dict['ObjectName'] = item.text
-                # if item.tag[51:] == "Data" and item.attrib['Name'] == "InformationRequested":
-                #     evt_dict['InformationRequested'] = item.text
-                # # 对于tag里只有element没有attrib的xml对象处理
-                # if item.tag[51:] not in ["Data", "Provider", "TimeCreated", "Correlation", "Security"]:
-                #     # print(item.tag[51:], item.text)
-                #     evt_dict[item.tag[51:]] = item.text
-
                 '''
                 EventData对象的tag全部是Data，没法区分不同的字段
-                在EventData对象的子节点里有2个比较特殊的字段，attrib有多个值，这2个需要特殊处理
-                <Data Name="SubjectIP" IPVersion="4">10.128.61.231</Data>
-                <Data Name="SubjectUnix" Uid="65534" Gid="65534" Local="false"/>
+                在EventData对象的子节点里有3个比较特殊的字段，attrib有多个值，
+                Object类型事件：<Data Name="SubjectIP" IPVersion="4">10.128.61.231</Data>
+                Object类型事件：<Data Name="SubjectUnix" Uid="65534" Gid="65534" Local="false"/>
+                Logon类型事件：<Data Name="IpAddress" IPVersion="4">10.128.61.232</Data>
                 '''
+                # 处理EventData节点数据
                 if item.tag[51:] == "Data":
+                    # Object相关的事件
                     if item.attrib['Name'] == "SubjectIP":
-                        evt_dict['SubjectIP'] = item.text
-                        evt_dict['IPVersion'] = item.attrib['IPVersion']
+                        dct_name['SubjectIP'] = item.text
+                        dct_name['IPVersion'] = item.attrib['IPVersion']
+                    # Object相关的事件
                     elif item.attrib['Name'] == "SubjectUnix":
-                        evt_dict['SubjectUnix'] = "SubjectUnix"
-                        evt_dict['UID'] = item.attrib['Uid']
-                        evt_dict['GID'] = item.attrib['Gid']
-                        evt_dict['Local'] = item.attrib['Local']
+                        dct_name['SubjectUnix'] = "SubjectUnix"
+                        dct_name['UID'] = item.attrib['Uid']
+                        dct_name['GID'] = item.attrib['Gid']
+                        dct_name['Local'] = item.attrib['Local']
+                    # Logon相关的事件
+                    elif item.attrib['Name'] == "IpAddress":
+                        dct_name['IpAddress'] = item.text
+                        dct_name['IPVersion'] = item.attrib['IPVersion']
                     else:
                         '''
                         EventData子节点的tag全部都是Data无法进行区分
@@ -114,90 +174,29 @@ def parser_xml():
                         示例：<Data Name="SubjectUserIsLocal">false</Data>
                         '''
                         for v in item.attrib.values():
-                            evt_dict[v] = item.text
+                            dct_name[v] = item.text
+                # 处理System节点数据
                 else:
                     '''
                     在System对象的子节点里有2个比较特殊的字段，只有attrib，没有element，需要特殊处理，示例：
                     <Provider Name="NetApp-Security-Auditing" Guid="{3CB2A168-FE19-4A4E-BDAD-DCF422F13473}"/>
                     '''
                     if item.tag[51:] == "Provider":
-                        evt_dict['Provider Name'] = item.attrib['Name']
-                        evt_dict['GUID'] = item.attrib['Guid']
+                        dct_name['Provider Name'] = item.attrib['Name']
+                        dct_name['GUID'] = item.attrib['Guid']
                     elif item.tag[51:] == "TimeCreated":
-                        evt_dict['TimeCreated SystemTime'] = item.attrib['SystemTime']
+                        dct_name['TimeCreated SystemTime'] = item.attrib['SystemTime']
                     else:
-                        evt_dict[item.tag[51:]] = item.text
-
-                # if item.attrib and item.text:
-                #     print("attrib: ", item.attrib, type(item.attrib))
-                #     print('-----dict-----')
-                #     for k, v in item.attrib.items():
-                #         print(k, v)
-                #     print("element: ", item.text)
-                # elif item.attrib:
-                #     print("attrib: ", item.attrib, type(item.attrib))
-                #     print('-----dict-----')
-                #     for k, v in item.attrib.items():
-                #         print(k, v)
-                # elif item.text:
-                #     print("element: ", item.text)
-
-        # if not bool(item.attrib):
-        #     print("text: ", item.text)
-        # else:
-        #     print("attrib: ", item.attrib, type(item.attrib))
-        # print(item.text)
-
-        # system info
-        # evt_dict['Provider Name'] = events[0][0].attrib['Name']
-        # evt_dict['Provider Guid'] = events[0][0].attrib['Guid'][1:-1]
-        # evt_dict['EventID'] = events[0][1].text
-        # evt_dict['EventName'] = events[0][2].text
-        # evt_dict['Version'] = events[0][3].text
-        # evt_dict['Source'] = events[0][4].text
-        # evt_dict['Level'] = events[0][5].text
-        # evt_dict['Opcode'] = events[0][6].text
-        # evt_dict['Keywords'] = events[0][7].text
-        # evt_dict['Result'] = events[0][8].text
-        # evt_dict['TimeCreated SystemTime'] = events[0][9].attrib['SystemTime']
-        # evt_dict['Channel'] = events[0][11].text
-        # evt_dict['Computer'] = events[0][12].text
-        # evt_dict['ComputerUUID'] = events[0][13].text
-
-        # event info
-        # evt_dict['SubjectIP'] = events[1][0].text
-        # evt_dict['IPVersion'] = events[1][0].attrib['IPVersion']
-        # evt_dict['Name'] = events[1][1].attrib['Name']
-        #
-        # # print(events[1][1].attrib)
-        # evt_dict['Uid'] = events[1][1].attrib['Uid']
-        # evt_dict['Gid'] = events[1][1].attrib['Gid']
-        # evt_dict['Local'] = events[1][1].attrib['Local']
-        #
-        # evt_dict['SubjectUserSid'] = events[1][2].text
-        # evt_dict['SubjectUserIsLocal'] = events[1][3].text
-        # evt_dict['SubjectDomainName'] = events[1][4].text
-        # evt_dict['SubjectUserName'] = events[1][5].text
-        # evt_dict['ObjectServer'] = events[1][6].text
-        #
-        # evt_dict['ObjectType'] = events[1][7].text
-        # evt_dict['HandleID'] = events[1][8].text
-        # evt_dict['ObjectName'] = events[1][9].text
-        # evt_dict['InformationRequested'] = events[1][10].text
-
-        # # 把解析的字典格式的数据，添加到list当中
-        # evt_list.append(evt_dict)
-
-        # 在list中，每一条list记录都包含sys_dict和evt_dict这2条记录，其中sys_dict字典内容全部相等
-        res_list.append(evt_dict)
-    return res_list
+                        dct_name[item.tag[51:]] = item.text
+        events_list.append(dct_name)
+    return events_list
 
 
 def write_csv(report_name, res_list, report_path: str = None):
     '''
     根据性能数据list内容，写入到本地文件中
     :param report_name: 要写入的csv文件名称，不带csv后缀
-    :param res_list: 需要写入的性能数据（list）
+    :param res_list: 需要写入的性能数据（list列表，其中包含一条或多条字典数据）
     :param report_path: 文件写入路径
     :return: null
     '''
@@ -229,7 +228,12 @@ def write_csv(report_name, res_list, report_path: str = None):
 if __name__ == '__main__':
     file_path = "D:\\tmp\\"
     csv_name = 'xml_report'
+    # parser_event_type()
     res_list = parser_xml()
-    write_csv(csv_name, res_list, report_path=file_path)
+    # print(res_list[0]['EventName'])
+    for i in res_list:
+        print(i)
+        # print(i['EventName'])
+    # write_csv(csv_name, res_list, report_path=file_path)
     # print(len(abc))
     pass
