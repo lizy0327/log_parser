@@ -12,7 +12,12 @@
 """
 
 # 一个分析xml日志文件的小工具，使用此工具会把相同的EventName类型的日志保存到同一个csv文件中。
-# 此工具还提供了只分析xml里有几种EventName类型的事件的方法：parser_event_type
+# 此工具还提供了分析xml里有几种EventName类型的事件的方法：parser_event_type
+# 此工具暂时只支持python3
+# 工具使用：
+# 1.使用时命令行如下：python3 xml_parser.py <xml_file or xml_dir> [output csv dir]
+# 第一个参数可以是xml文件路径，也可以是包含xml文件类型的文件夹（必选参数）
+# 第二个参数是解析后csv文件保存目录（可选参数），如果省略的话会在xml文件（或目录）同级下创建以时间戳为后缀的同名文件（或目录）
 # Copyright LiZhaoYang
 
 import sys
@@ -22,7 +27,8 @@ import time
 import collections
 import xml.etree.ElementTree as ET
 
-version = 0.8
+version = 0.9
+
 
 def parser_event_type(xml_path):
     """
@@ -47,6 +53,15 @@ def parser_event_type(xml_path):
     for d_type in dct_type:
         print(d_type)
     return dct_type
+
+
+"""
+xml对象总共有3种属性：
+Tag： 使用<和>包围的部分，如<rank>成为start-tag，</rank>是end-tags；Tag结果是一个字符串。
+Element：被Tag包围的部分，如<rank>68</rank>，可以认为是一个节点，它可以有子节点。element的值通过element.text获得
+Attribute：在Tag中可能存在的name/value对，如<country name="Liechtenstein">中的name="Liechtenstein"，一般表示属性。
+Attribute结果是一个字典。
+"""
 
 
 def parser_xml(xml_path):
@@ -121,8 +136,10 @@ def parser_xml(xml_path):
                             dct_name[item.tag[51:]] = item.text
             events_list.append(dct_name)
         return events_list
-    except Exception as e:
+    except SyntaxError:
         print(f"the file: {xml_path} is not xml format")
+    except Exception as e:
+        print(e)
 
 
 def write_csv(report_name, event_list, report_path: str = None):
@@ -177,12 +194,13 @@ def archive_dct(dct_list, report_path):
 
 
 def process_xml(input_path: str = "", output_path: str = ""):
-    '''
+    """
     根据传入的xml文件及生成报告的csv文件目录类型的不同，使用不同的策略。
     :param input_path: xml文件或文件路径
     :param output_path: 解析后csv文件路径，如果缺省，则在input_path同级目录下创建新目录
     :return:
-    '''
+    """
+
     # 分别传入了xml文件目录和csv报告保存目录
     if os.path.isdir(input_path) and os.path.isdir(output_path):
         print("xml dir and output dir")
@@ -201,9 +219,14 @@ def process_xml(input_path: str = "", output_path: str = ""):
                     all_evt_list = parser_xml(xml_path=str(new_path).replace("\\", "/"))
                     # 把解析后的xml写入csv文件中
                     archive_dct(all_evt_list, report_path=str(new_output_path).replace("\\", "/"))
+                except TypeError:
+                    os.rmdir(new_output_path)
+                except KeyError:
+                    os.rmdir(new_output_path)
+                    print("the file: " + str(new_path).replace("\\", "/") + " is not ln log format")
                 except Exception as e:
                     os.rmdir(new_output_path)
-                    print(f"the file: {new_path} is bad.")
+                    print(e)
     # 只传入了xml文件目录
     elif os.path.isdir(input_path):
         print("only xml dir")
@@ -227,18 +250,28 @@ def process_xml(input_path: str = "", output_path: str = ""):
                     all_evt_list = parser_xml(xml_path=str(new_path).replace("\\", "/"))
                     # 把解析后的xml写入csv文件中
                     archive_dct(all_evt_list, report_path=str(new_output_path).replace("\\", "/"))
+                except TypeError:
+                    os.rmdir(new_output_path)
+                except KeyError:
+                    os.rmdir(new_output_path)
+                    print("the file: " + str(new_path).replace("\\", "/") + " is not ln log format")
                 except Exception as e:
                     os.rmdir(new_output_path)
-                    print(f"the file: {new_path} is bad.")
+                    print(e)
     # 传入了xml文件本身，及csv报告保存目录
     elif os.path.isfile(input_path) and os.path.isdir(output_path):
         print("xml file and output dir")
         try:
             all_evt_list = parser_xml(xml_path=str(input_path).replace("\\", "/"))
             archive_dct(all_evt_list, report_path=str(output_path).replace("\\", "/"))
+        except TypeError:
+            os.rmdir(output_path)
+        except KeyError:
+            os.rmdir(output_path)
+            print("the file: " + str(input_path).replace("\\", "/") + " is not ln log format")
         except Exception as e:
-            os.rmdir(input_path)
-            print(f"the file: {input_path} is bad.")
+            os.rmdir(output_path)
+            print(e)
     # 只传入了xml文件本身
     elif os.path.isfile(input_path):
         print("only xml file")
@@ -248,9 +281,14 @@ def process_xml(input_path: str = "", output_path: str = ""):
         try:
             all_evt_list = parser_xml(xml_path=str(input_path).replace("\\", "/"))
             archive_dct(all_evt_list, report_path=str(new_output_path).replace("\\", "/"))
+        except TypeError:
+            os.rmdir(new_output_path)
+            pass
+        except KeyError:
+            os.rmdir(new_output_path)
+            print("the file: " + str(input_path).replace("\\", "/") + " is not ln log format")
         except Exception as e:
             os.rmdir(new_output_path)
-            print(f"the file: {input_path} is bad.")
             print(e)
     else:
         print("555555555555555555")
@@ -258,31 +296,9 @@ def process_xml(input_path: str = "", output_path: str = ""):
 
 
 if __name__ == '__main__':
-    # file_path = str("D:\\tmp\\demo.xml").replace("\\", "/")
-    # file_path = str("D:\\tmp\\xmldata.xml").replace("\\", "/")
-    # file_path = str("D:\\tmp\\all_type.xml").replace("\\", "/")
-    # file_path = str("D:\\tmp\\lizy-demo.xml").replace("\\", "/")
-    # file_path = str("D:\\tmp\\b.xml").replace("\\", "/")
-    # file_path = str("D:\\tmp\\csdn.xml").replace("\\", "/")
-    # parser_event_type(xml_path=file_path)
-
     # process_xml(input_path="D:\\tmp\input\\fewfew", output_path="D:\\tmp\\123")
-    # process_xml(input_path="D:\\tmp\input\demo.xml", output_path="D:\\tmp\\123")
-    # process_xml(input_path="D:\\tmp\input\\fewfew\eee.xml", output_path="D:\\tmp\\123")
-    process_xml(input_path="D:\\tmp\input\\fewfew\eee.xml")
-    # process_xml(input_path="D:\\tmp\input\\fewfew\\")
-    # process_xml(input_path="D:\\tmp\\all_type.xml")
-
-    # test1 = "D:\\tmp\input\\fewfew"
-    # print(test1)
-    # # print(os.path.join(os.path.dirname(test1) , "111111" + "22222222"))
-    # print(os.path.join(os.path.abspath(test1)  + "dddd"))
-    # print(os.path.abspath(os.path.join(os.path.abspath(test1) ,   "dddd")))
-    # test2 = os.path.join(test1 + "1111111111" + "00000000000")
-    # print(os.path.join(test2, "222222222"))
 
     input_arg = sys.argv
-    # print(input_path[0])
     # print(input_arg)
     # 判断参数输入是否正确
     if len(input_arg) == 1:
@@ -293,5 +309,4 @@ if __name__ == '__main__':
         process_xml(input_path=str(input_arg[1]).replace("\\", "/"), output_path=str(input_arg[2]).replace("\\", "/"))
     else:
         print("arg error")
-
     pass
