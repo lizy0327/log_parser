@@ -1,4 +1,4 @@
-# !/usr/bin/env python
+# !/usr/bin/env python3
 # -*-coding:utf-8 -*-
 
 """
@@ -20,14 +20,97 @@
 # 第二个参数是解析后csv文件保存目录（可选参数），如果省略的话会在xml文件（或目录）同级下创建以时间戳为后缀的同名文件（或目录）
 # Copyright LiZhaoYang
 
-import sys
 import csv
 import os
 import time
 import collections
+import re
+import sys
+import datetime
+import subprocess
 import xml.etree.ElementTree as ET
+from Cryptodome.Cipher import AES
+from binascii import a2b_hex
 
-version = 0.9
+version = "0.9.1"
+
+
+def my_help():
+    print(
+        "-h --help    Show this help \n"
+        "-v --version Show version \n"
+        "EXAMPLES: \n"
+        "xml_parser <input: xml file> [output: csv dir] \n"
+        "xml_parser <input: xml dir> [output: csv dir] \n"
+        "xml_parser <input: xml file> ,create new dir for the csv output on the same level. \n"
+        "xml_parser <input: xml dir>  ,create new dir for the csv output on the same level. "
+    )
+
+
+# License check
+def license_check():
+    license_dic = parse_license_file()
+    sign = decrypt(license_dic['Sign'])
+    sign_list = sign.split('#')
+    mac = sign_list[0].strip()
+    date = sign_list[1].strip()
+
+    # Check license file is modified or not.
+    if (mac != license_dic['MAC']) or (date != license_dic['Date']):
+        print('*Error*: License file is modified!')
+        sys.exit(1)
+
+    # Check MAC and effective date invalid or not.
+    if len(sign_list) == 2:
+        mac = get_mac()
+        current_date = datetime.datetime.now().strftime('%Y%m%d')
+        # Must run this script under specified MAC.
+        if sign_list[0] != mac:
+            print('*Error*: Invalid host!')
+            sys.exit(1)
+
+        # Current time must be before effective date.
+        if sign_list[1] < current_date:
+            print('*Error*: License is expired!')
+            sys.exit(1)
+    else:
+        print('*Error*: Wrong Sign setting on license file.')
+        sys.exit(1)
+
+
+def parse_license_file():
+    try:
+        license_dic = {}
+        license_file = './License.dat'
+        with open(license_file, 'r') as LF:
+            for line in LF.readlines():
+                if re.match('^\s*(\S+)\s*:\s*(\S+)\s*$', line):
+                    my_match = re.match('^\s*(\S+)\s*:\s*(\S+)\s*$', line)
+                    license_dic[my_match.group(1)] = my_match.group(2)
+        return license_dic
+    except FileNotFoundError:
+        print("the license file is not found")
+        sys.exit()
+
+
+def decrypt(content):
+    aes = AES.new(b'0CoJUm3Qyw3W3jud', AES.MODE_CBC, b'0123456789123456')
+    decrypted_content = aes.decrypt(a2b_hex(content.encode('utf-8')))
+    return decrypted_content.decode('utf-8')
+
+
+def get_mac():
+    mac = ''
+    SP = subprocess.Popen('/sbin/ifconfig', shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE)
+    (stdout, stderr) = SP.communicate()
+    for line in str(stdout, 'utf-8').split('\n'):
+        if re.match('^\s*ether\s+(\S+)\s+.*$', line):
+            my_match = re.match('^\s*ether\s+(\S+)\s+.*$', line)
+            mac = my_match.group(1)
+            break
+    mac = '00:0c:29:4a:d4:6c'
+    return mac
 
 
 def parser_event_type(xml_path):
@@ -219,8 +302,10 @@ def process_xml(input_path: str = "", output_path: str = ""):
                     all_evt_list = parser_xml(xml_path=str(new_path).replace("\\", "/"))
                     # 把解析后的xml写入csv文件中
                     archive_dct(all_evt_list, report_path=str(new_output_path).replace("\\", "/"))
+                # 解析的日志文件虽然以xml结尾，但是内容并不符合xml标准
                 except TypeError:
                     os.rmdir(new_output_path)
+                # 解析的日志文件符合xml标准，但不是netapp的日志格式的文件
                 except KeyError:
                     os.rmdir(new_output_path)
                     print("the file: " + str(new_path).replace("\\", "/") + " is not ln log format")
@@ -250,8 +335,10 @@ def process_xml(input_path: str = "", output_path: str = ""):
                     all_evt_list = parser_xml(xml_path=str(new_path).replace("\\", "/"))
                     # 把解析后的xml写入csv文件中
                     archive_dct(all_evt_list, report_path=str(new_output_path).replace("\\", "/"))
+                # 解析的日志文件虽然以xml结尾，但是内容并不符合xml标准
                 except TypeError:
                     os.rmdir(new_output_path)
+                # 解析的日志文件符合xml标准，但不是netapp的日志格式的文件
                 except KeyError:
                     os.rmdir(new_output_path)
                     print("the file: " + str(new_path).replace("\\", "/") + " is not ln log format")
@@ -264,8 +351,10 @@ def process_xml(input_path: str = "", output_path: str = ""):
         try:
             all_evt_list = parser_xml(xml_path=str(input_path).replace("\\", "/"))
             archive_dct(all_evt_list, report_path=str(output_path).replace("\\", "/"))
+        # 解析的日志文件虽然以xml结尾，但是内容并不符合xml标准
         except TypeError:
             os.rmdir(output_path)
+        # 解析的日志文件符合xml标准，但不是netapp的日志格式的文件
         except KeyError:
             os.rmdir(output_path)
             print("the file: " + str(input_path).replace("\\", "/") + " is not ln log format")
@@ -281,9 +370,11 @@ def process_xml(input_path: str = "", output_path: str = ""):
         try:
             all_evt_list = parser_xml(xml_path=str(input_path).replace("\\", "/"))
             archive_dct(all_evt_list, report_path=str(new_output_path).replace("\\", "/"))
+        # 解析的日志文件虽然以xml结尾，但是内容并不符合xml标准
         except TypeError:
             os.rmdir(new_output_path)
-            pass
+            print(TypeError)
+        # 解析的日志文件符合xml标准，但不是netapp的日志格式的文件
         except KeyError:
             os.rmdir(new_output_path)
             print("the file: " + str(input_path).replace("\\", "/") + " is not ln log format")
@@ -291,22 +382,22 @@ def process_xml(input_path: str = "", output_path: str = ""):
             os.rmdir(new_output_path)
             print(e)
     else:
-        print("555555555555555555")
-        print("path is error")
+        print("the path is error")
 
 
 if __name__ == '__main__':
     # process_xml(input_path="D:\\tmp\input\\fewfew", output_path="D:\\tmp\\123")
-
+    license_check()
+    # input_arg = "sys.argv"
     input_arg = sys.argv
-    # print(input_arg)
     # 判断参数输入是否正确
-    if len(input_arg) == 1:
-        print("the xml file is must")
-    elif len(input_arg) == 2:
+    if len(input_arg) == 1 or input_arg[1] == "-h" or input_arg[1] == "--help":
+        my_help()
+    elif input_arg[1] == "-v" or input_arg[1] == "--version":
+        print(version)
+    elif len(input_arg) == 2 and not isinstance(input_arg[1], str):
         process_xml(input_path=str(input_arg[1]).replace("\\", "/"))
-    elif len(input_arg) >= 3:
+    elif len(input_arg) == 3 and not isinstance(input_arg[1], str) and not isinstance(input_arg[2], str):
         process_xml(input_path=str(input_arg[1]).replace("\\", "/"), output_path=str(input_arg[2]).replace("\\", "/"))
     else:
         print("arg error")
-    pass
