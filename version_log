@@ -42,4 +42,5 @@
 打包时是否能够把多个py文件都包含进去的问题
 3.对工程增加main.py文件，用pyinstall打包时以main.py文件作为入口（只是计划，不知道行不行得通）
 4.优化mac获取函数
+5.增加requirements.txt文件
 
