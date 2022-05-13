@@ -13,6 +13,18 @@
 
 from Cryptodome.Cipher import AES
 from binascii import b2a_hex
+import sys
+
+version = '1.0.0'
+
+
+def my_help():
+    print(
+        "-h --help    Show this help \n"
+        "-v --version Show version \n"
+        "EXAMPLES: \n"
+        "gen_license <uuid> <date:20220101>"
+    )
 
 
 def encrypt(content):
@@ -38,6 +50,21 @@ def gen_license_file(uuid, date):
 
 
 if __name__ == '__main__':
-    arg1 = '43f74d56-674c-73e6-668e-6a9d22fea12d'
-    arg2 = 20230520
-    gen_license_file(uuid=arg1, date=arg2)
+    # arg1 = 'adf44d56-cb0b-104d-5993-986d637e513a'
+    # arg2 = 20230520
+    input_arg = sys.argv
+
+    if len(input_arg) == 1:
+        my_help()
+    elif len(input_arg) == 2:
+        # 显示版本信息
+        if input_arg[1] == "-v" or input_arg[1] == "--version":
+            print(version)
+        elif input_arg[1] == "-h" or input_arg[1] == "--help":
+            my_help()
+        else:
+            print("parameter error")
+    elif len(input_arg) == 3:
+        gen_license_file(uuid=input_arg[1], date=input_arg[2])
+    else:
+        print("parameter error")
