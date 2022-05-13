@@ -25,17 +25,19 @@ def encrypt(content):
     # aes = AES.new(b'2023052020210520', AES.MODE_CBC, b'2023052020210520')
     aes = AES.new(b'0CoJUm3Qyw3W3jud', AES.MODE_CBC, b'0123456789123456')
     encrypted_content = aes.encrypt(content)
-    return (b2a_hex(encrypted_content))
+    return b2a_hex(encrypted_content)
 
 
-def gen_license_file():
+def gen_license_file(uuid, date):
     license_file = './License.dat'
     with open(license_file, 'w') as LF:
-        LF.write('UUID : 400f4d56-dc23-fcb9-a036-44ad358cc569\n')
-        LF.write('Date : 20220520\n')
-        sign = encrypt('400f4d56-dc23-fcb9-a036-44ad358cc569')
+        LF.write(f'UUID : {uuid}\n')
+        LF.write(f'Date : {date}\n')
+        sign = encrypt(f'{uuid}#{date}')
         LF.write('Sign : ' + str(sign.decode('utf-8')) + '\n')
 
 
 if __name__ == '__main__':
-    gen_license_file()
+    arg1 = '43f74d56-674c-73e6-668e-6a9d22fea12d'
+    arg2 = 20230520
+    gen_license_file(uuid=arg1, date=arg2)

@@ -79,7 +79,7 @@ def get_mac():
             mac = my_match.group(1)
             break
     mac = '00:0c:29:4a:d4:6c'
-    return (mac)
+    return mac
 
 
 # Main function.
