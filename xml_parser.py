@@ -32,7 +32,7 @@ import xml.etree.ElementTree as ET
 from Cryptodome.Cipher import AES
 from binascii import a2b_hex
 
-version = "0.9.2"
+version = "1.0.0"
 
 
 def my_help():
