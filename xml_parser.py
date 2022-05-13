@@ -64,7 +64,7 @@ def license_check():
     if len(sign_list) == 2:
         uuid = get_sys_uuid()
         current_date = datetime.datetime.now().strftime('%Y%m%d')
-        # Must run this script under specified MAC.
+        # Must run this script under specified UUID.
         if sign_list[0] != uuid:
             print('*Error*: Invalid host!')
             sys.exit(1)
@@ -97,20 +97,6 @@ def decrypt(content):
     aes = AES.new(b'0CoJUm3Qyw3W3jud', AES.MODE_CBC, b'0123456789123456')
     decrypted_content = aes.decrypt(a2b_hex(content.encode('utf-8')))
     return decrypted_content.decode('utf-8')
-
-
-def get_mac():
-    mac = ''
-    SP = subprocess.Popen('/sbin/ifconfig', shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                          stderr=subprocess.PIPE)
-    (stdout, stderr) = SP.communicate()
-    for line in str(stdout, 'utf-8').split('\n'):
-        if re.match('^\s*ether\s+(\S+)\s+.*$', line):
-            my_match = re.match('^\s*ether\s+(\S+)\s+.*$', line)
-            mac = my_match.group(1)
-            break
-    mac = '00:0c:29:4a:d4:6c'
-    return mac
 
 
 def get_sys_uuid():
