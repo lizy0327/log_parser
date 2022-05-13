@@ -66,5 +66,9 @@ version == 1.0.1:
 
 gen_license version == 1.0.0
 1.生成license文件
+
+gen_license version == 1.0.1
+1.优化帮助提示
+2.增加获取OS UUID的方法
 遗留问题：
 1.没有对2个参数的有效性进行验证

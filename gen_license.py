@@ -14,8 +14,9 @@
 from Cryptodome.Cipher import AES
 from binascii import b2a_hex
 import sys
+import subprocess
 
-version = '1.0.0'
+version = '1.0.1'
 
 
 def my_help():
@@ -23,8 +24,17 @@ def my_help():
         "-h --help    Show this help \n"
         "-v --version Show version \n"
         "EXAMPLES: \n"
-        "gen_license <uuid> <date:20220101>"
+        "gen_license -u --uuid    get os uuid\n"
+        "gen_license <uuid> <date:20220101>    create license file"
     )
+
+
+def get_sys_uuid():
+    sp = subprocess.Popen('/sbin/dmidecode -s system-uuid', shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE)
+    (stdout, stderr) = sp.communicate()
+    stdout_list = str(stdout, 'utf-8').split('\n')
+    print(stdout_list[0])
 
 
 def encrypt(content):
@@ -62,6 +72,8 @@ if __name__ == '__main__':
             print(version)
         elif input_arg[1] == "-h" or input_arg[1] == "--help":
             my_help()
+        elif input_arg[1] == "-u" or input_arg[1] == "--uuid":
+            get_sys_uuid()
         else:
             print("parameter error")
     elif len(input_arg) == 3:
