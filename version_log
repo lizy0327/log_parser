@@ -49,9 +49,13 @@ version == 1.0.0：
 2.优化了参数错误提示
 遗留任务：
 1.对可执行文件进行加密
-2.优化工程逻辑，比如把xml_parser.py里的检查license方法移除，使用import的方式从check_license.py导入的方法，但是更改后需要考虑pyinstall
+2.目前只支持linux环境，后面可以考虑打包成exe格式
+3.优化工程逻辑，比如把xml_parser.py里的检查license方法移除，使用import的方式从check_license.py导入的方法，但是更改后需要考虑pyinstall
 打包时是否能够把多个py文件都包含进去的问题
-3.对工程增加main.py文件，用pyinstall打包时以main.py文件作为入口（只是计划，不知道行不行得通）
-4.增加requirements.txt文件（验证软件运行所需要的环境要求）
-5.目前只支持linux环境，
+4.对工程增加main.py文件，用pyinstall打包时以main.py文件作为入口（只是计划，不知道行不行得通）
+5.增加requirements.txt文件（通过验证打包的可执行文件已经包含运行所需要的所有依赖，完全兼容centos7和centos8，基本也就不需要这个文件了。）
+
+
+version == 1.0.1:
+1.优化了错误参数提示逻辑
 

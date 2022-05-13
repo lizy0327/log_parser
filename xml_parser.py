@@ -32,7 +32,7 @@ import xml.etree.ElementTree as ET
 from Cryptodome.Cipher import AES
 from binascii import a2b_hex
 
-version = "1.0.0"
+version = "1.0.1"
 
 
 def my_help():
@@ -387,12 +387,14 @@ if __name__ == '__main__':
     license_check()
     input_arg = sys.argv
     # 判断参数输入是否正确
-    if len(input_arg) == 1 or input_arg[1] == "-h" or input_arg[1] == "--help":
+    if len(input_arg) == 1:
         my_help()
     elif len(input_arg) == 2:
         # 显示版本信息
         if input_arg[1] == "-v" or input_arg[1] == "--version":
             print(version)
+        elif input_arg[1] == "-h" or input_arg[1] == "--help":
+            my_help()
         # 只传入了xml文件或目录
         elif os.path.isfile(input_arg[1]) or os.path.isdir(input_arg[1]):
             input_arg1 = str(input_arg[1]).replace("\\", "/")
