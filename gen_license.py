@@ -31,9 +31,9 @@ def encrypt(content):
 def gen_license_file():
     license_file = './License.dat'
     with open(license_file, 'w') as LF:
-        LF.write('MAC : 00:0c:29:4a:d4:6c\n')
+        LF.write('UUID : 400f4d56-dc23-fcb9-a036-44ad358cc569\n')
         LF.write('Date : 20220520\n')
-        sign = encrypt('00:0c:29:4a:d4:6c#20220520')
+        sign = encrypt('400f4d56-dc23-fcb9-a036-44ad358cc569')
         LF.write('Sign : ' + str(sign.decode('utf-8')) + '\n')
 
 

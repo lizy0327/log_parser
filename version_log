@@ -32,7 +32,7 @@
 2.执行编译成可执行文件
 3.加密或license
 2022/05/13
-第10个版本：
+version == 0.92：
 1.优化了help提示
 2.解决了“执行编译成可执行文件”
 3.增加了license功能
@@ -43,4 +43,15 @@
 3.对工程增加main.py文件，用pyinstall打包时以main.py文件作为入口（只是计划，不知道行不行得通）
 4.优化mac获取函数
 5.增加requirements.txt文件
+2022/05/13
+version == 1.0.0：
+1.取消获取mac方法，修改license授权模式为系统UUID和时间的方式
+2.优化了参数错误提示
+遗留任务：
+1.对可执行文件进行加密
+2.优化工程逻辑，比如把xml_parser.py里的检查license方法移除，使用import的方式从check_license.py导入的方法，但是更改后需要考虑pyinstall
+打包时是否能够把多个py文件都包含进去的问题
+3.对工程增加main.py文件，用pyinstall打包时以main.py文件作为入口（只是计划，不知道行不行得通）
+4.增加requirements.txt文件（验证软件运行所需要的环境要求）
+5.目前只支持linux环境，
 

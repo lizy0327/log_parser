@@ -32,7 +32,7 @@ import xml.etree.ElementTree as ET
 from Cryptodome.Cipher import AES
 from binascii import a2b_hex
 
-version = "0.9.1"
+version = "0.9.2"
 
 
 def my_help():
@@ -52,20 +52,20 @@ def license_check():
     license_dic = parse_license_file()
     sign = decrypt(license_dic['Sign'])
     sign_list = sign.split('#')
-    mac = sign_list[0].strip()
+    uuid = sign_list[0].strip()
     date = sign_list[1].strip()
 
     # Check license file is modified or not.
-    if (mac != license_dic['MAC']) or (date != license_dic['Date']):
+    if (uuid != license_dic['UUID']) or (date != license_dic['Date']):
         print('*Error*: License file is modified!')
         sys.exit(1)
 
-    # Check MAC and effective date invalid or not.
+    # Check UUID and effective date invalid or not.
     if len(sign_list) == 2:
-        mac = get_mac()
+        uuid = get_sys_uuid()
         current_date = datetime.datetime.now().strftime('%Y%m%d')
         # Must run this script under specified MAC.
-        if sign_list[0] != mac:
+        if sign_list[0] != uuid:
             print('*Error*: Invalid host!')
             sys.exit(1)
 
@@ -89,7 +89,7 @@ def parse_license_file():
                     license_dic[my_match.group(1)] = my_match.group(2)
         return license_dic
     except FileNotFoundError:
-        print("the license file is not found")
+        print("License file is not found")
         sys.exit()
 
 
@@ -111,6 +111,14 @@ def get_mac():
             break
     mac = '00:0c:29:4a:d4:6c'
     return mac
+
+
+def get_sys_uuid():
+    sp = subprocess.Popen('/sbin/dmidecode -s system-uuid', shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE)
+    (stdout, stderr) = sp.communicate()
+    stdout_list = str(stdout, 'utf-8').split('\n')
+    return stdout_list[0]
 
 
 def parser_event_type(xml_path):
@@ -308,10 +316,26 @@ def process_xml(input_path: str = "", output_path: str = ""):
                 # 解析的日志文件符合xml标准，但不是netapp的日志格式的文件
                 except KeyError:
                     os.rmdir(new_output_path)
-                    print("the file: " + str(new_path).replace("\\", "/") + " is not ln log format")
+                    print("The file: " + str(new_path).replace("\\", "/") + " is not ln log format")
                 except Exception as e:
                     os.rmdir(new_output_path)
                     print(e)
+    # 传入了xml文件本身，及csv报告保存目录
+    elif os.path.isfile(input_path) and os.path.isdir(output_path):
+        print("xml file and output dir")
+        try:
+            all_evt_list = parser_xml(xml_path=str(input_path).replace("\\", "/"))
+            archive_dct(all_evt_list, report_path=str(output_path).replace("\\", "/"))
+            # 解析的日志文件虽然以xml结尾，但是内容并不符合xml标准
+        except TypeError:
+            os.rmdir(output_path)
+        # 解析的日志文件符合xml标准，但不是netapp的日志格式的文件
+        except KeyError:
+            os.rmdir(output_path)
+            print("The file: " + str(input_path).replace("\\", "/") + " is not ln log format")
+        except Exception as e:
+            os.rmdir(output_path)
+            print(e)
     # 只传入了xml文件目录
     elif os.path.isdir(input_path):
         print("only xml dir")
@@ -341,26 +365,10 @@ def process_xml(input_path: str = "", output_path: str = ""):
                 # 解析的日志文件符合xml标准，但不是netapp的日志格式的文件
                 except KeyError:
                     os.rmdir(new_output_path)
-                    print("the file: " + str(new_path).replace("\\", "/") + " is not ln log format")
+                    print("The file: " + str(new_path).replace("\\", "/") + " is not ln log format")
                 except Exception as e:
                     os.rmdir(new_output_path)
                     print(e)
-    # 传入了xml文件本身，及csv报告保存目录
-    elif os.path.isfile(input_path) and os.path.isdir(output_path):
-        print("xml file and output dir")
-        try:
-            all_evt_list = parser_xml(xml_path=str(input_path).replace("\\", "/"))
-            archive_dct(all_evt_list, report_path=str(output_path).replace("\\", "/"))
-        # 解析的日志文件虽然以xml结尾，但是内容并不符合xml标准
-        except TypeError:
-            os.rmdir(output_path)
-        # 解析的日志文件符合xml标准，但不是netapp的日志格式的文件
-        except KeyError:
-            os.rmdir(output_path)
-            print("the file: " + str(input_path).replace("\\", "/") + " is not ln log format")
-        except Exception as e:
-            os.rmdir(output_path)
-            print(e)
     # 只传入了xml文件本身
     elif os.path.isfile(input_path):
         print("only xml file")
@@ -377,27 +385,46 @@ def process_xml(input_path: str = "", output_path: str = ""):
         # 解析的日志文件符合xml标准，但不是netapp的日志格式的文件
         except KeyError:
             os.rmdir(new_output_path)
-            print("the file: " + str(input_path).replace("\\", "/") + " is not ln log format")
+            print("The file: " + str(input_path).replace("\\", "/") + " is not ln log format")
         except Exception as e:
             os.rmdir(new_output_path)
             print(e)
     else:
-        print("the path is error")
+        print("The path is error")
 
 
 if __name__ == '__main__':
     # process_xml(input_path="D:\\tmp\input\\fewfew", output_path="D:\\tmp\\123")
+    # 获取OS UUID
+    get_sys_uuid()
+    # 检查license授权
     license_check()
-    # input_arg = "sys.argv"
     input_arg = sys.argv
     # 判断参数输入是否正确
     if len(input_arg) == 1 or input_arg[1] == "-h" or input_arg[1] == "--help":
         my_help()
-    elif input_arg[1] == "-v" or input_arg[1] == "--version":
-        print(version)
-    elif len(input_arg) == 2 and not isinstance(input_arg[1], str):
-        process_xml(input_path=str(input_arg[1]).replace("\\", "/"))
-    elif len(input_arg) == 3 and not isinstance(input_arg[1], str) and not isinstance(input_arg[2], str):
-        process_xml(input_path=str(input_arg[1]).replace("\\", "/"), output_path=str(input_arg[2]).replace("\\", "/"))
+    elif len(input_arg) == 2:
+        # 显示版本信息
+        if input_arg[1] == "-v" or input_arg[1] == "--version":
+            print(version)
+        # 只传入了xml文件或目录
+        elif os.path.isfile(input_arg[1]) or os.path.isdir(input_arg[1]):
+            input_arg1 = str(input_arg[1]).replace("\\", "/")
+            process_xml(input_path=input_arg1)
+        else:
+            print("parameter error")
+    elif len(input_arg) == 3:
+        # 传入了xml文件和csv报告保存目录
+        if os.path.isfile(input_arg[1]) and os.path.isdir(input_arg[2]):
+            input_arg1 = str(input_arg[1]).replace("\\", "/")
+            input_arg2 = str(input_arg[2]).replace("\\", "/")
+            process_xml(input_path=input_arg1, output_path=input_arg2)
+        # 传入了xml文件目录和csv报告目录
+        elif os.path.isdir(input_arg[1]) and os.path.isdir(input_arg[2]):
+            input_arg1 = str(input_arg[1]).replace("\\", "/")
+            input_arg2 = str(input_arg[2]).replace("\\", "/")
+            process_xml(input_path=input_arg1, output_path=input_arg2)
+        else:
+            print("parameter error")
     else:
-        print("arg error")
+        print("parameter error")
