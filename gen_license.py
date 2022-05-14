@@ -25,7 +25,8 @@ def my_help():
         "-v --version Show version \n"
         "EXAMPLES: \n"
         "gen_license -u --uuid    get os uuid\n"
-        "gen_license <uuid> <date:20220101>    create license file"
+        "gen_license <uuid> <date:20220101>    create license file\n"
+        "\nyou can use 'dmidecode -s system-uuid' get linux uuid"
     )
 
 
